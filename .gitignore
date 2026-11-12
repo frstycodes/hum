@@ -1,0 +1,12 @@
+# build output
+/target/
+/dist/
+/android/out/
+
+# secrets and per-PC files: never commit these
+*.keystore
+*.jks
+/android/keystore.pass
+hum-cert.der
+hum-key.der
+hum-android-crash.txt

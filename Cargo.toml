@@ -1,0 +1,63 @@
+﻿[package]
+name = "hum"
+version = "1.0.0"
+edition = "2021"
+description = "Use your phone as your PC's microphone, over Wi-Fi"
+authors = ["Sandesh Pandey"]
+license = "PolyForm-Noncommercial-1.0.0"
+repository = "https://github.com/frstycodes/hum"
+readme = "README.md"
+publish = false
+
+[dependencies]
+cpal = "0.15"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rcgen = { version = "0.13", default-features = false, features = ["ring"] }
+tungstenite = { version = "0.24", default-features = false, features = ["handshake"] }
+qrcode = { version = "0.14", default-features = false }
+ring = "0.17"
+windows-core = "0.61"
+windows-numerics = "0.2"
+windows-registry = "0.5"
+
+[dependencies.windows]
+version = "0.61"
+features = [
+    "Foundation",
+    "Foundation_Numerics",
+    "Graphics_DirectX",
+    "System",
+    "UI",
+    "UI_Composition",
+    "UI_Composition_Desktop",
+    "Win32_Foundation",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_System_Com_Urlmon",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_System_WinRT",
+    "Win32_System_WinRT_Composition",
+    "Win32_UI_Controls",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[build-dependencies]
+embed-resource = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

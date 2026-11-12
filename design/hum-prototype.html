@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hum prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  /* Stash roles, both themes */
+  :root {
+    --gold: #f9c74f; --orange: #f27d2e; --rose: #d1384b; --plum: #6a2c70; --green: #30d158;
+    --ink-rgb: 255 255 255;
+    --text: rgb(var(--ink-rgb) / .92); --dim: rgb(var(--ink-rgb) / .55); --faint: rgb(var(--ink-rgb) / .32);
+    --well: rgb(0 0 0 / .3); --link: #f27d2e; --warn: #f5a97a;
+    --mica: radial-gradient(120% 90% at 10% 0%, #2c2733 0%, #211e26 45%, #1c1a20 100%);
+    --desk: #0f0e12;
+  }
+  [data-theme="light"] {
+    --ink-rgb: 28 25 32;
+    --text: rgb(var(--ink-rgb) / .9); --dim: rgb(var(--ink-rgb) / .6); --faint: rgb(var(--ink-rgb) / .42);
+    --well: rgb(0 0 0 / .066); --link: #c45610; --warn: #b85c14;
+    --mica: radial-gradient(120% 90% at 10% 0%, #f7f3f4 0%, #f2f0f4 45%, #eeedf1 100%);
+    --desk: #d9d6de;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--desk); color: var(--text);
+    font: 13px/1.4 "DM Sans", "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: center; padding: 32px 16px;
+    transition: background .2s;
+  }
+
+  /* ---------- controls (not part of the app) ---------- */
+  .panel { width: 260px; display: flex; flex-direction: column; gap: 18px; color: var(--dim); }
+  .panel h1 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+  .panel p { margin: 0; font-size: 12.5px; }
+  .group b { display: block; font-size: 12px; font-weight: 500; margin-bottom: 6px; color: var(--faint); }
+  .seg { display: flex; gap: 2px; padding: 3px; border-radius: 13px; background: var(--well); }
+  .seg button {
+    flex: 1; border: 0; background: none; color: var(--dim); font: 500 12.5px "DM Sans", sans-serif;
+    height: 28px; border-radius: 10px; cursor: pointer; padding: 0 8px;
+  }
+  .seg button[aria-pressed="true"] { background: rgb(var(--ink-rgb) / .13); color: var(--text); }
+  .seg button:focus-visible { outline: 2px solid var(--orange); outline-offset: 1px; }
+
+  /* ---------- the window ---------- */
+  .win {
+    width: 380px; height: 616px; border-radius: 8px; position: relative; overflow: hidden; flex: none;
+    background: var(--mica); box-shadow: 0 0 0 1px rgb(var(--ink-rgb) / .1), 0 18px 50px rgb(0 0 0 / .35);
+  }
+  .caption { position: absolute; top: 0; right: 0; display: flex; }
+  .caption span { width: 46px; height: 32px; display: grid; place-items: center; color: var(--text); opacity: .9; }
+  .caption span:hover { background: rgb(var(--ink-rgb) / .09); }
+  .caption span:last-child:hover { background: #c42b1c; color: white; }
+  .title { position: absolute; left: 17px; top: 17px; display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 600; }
+  .logo { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; gap: 1.5px; }
+  .logo i { width: 3.3px; border-radius: .95px; transition: height .08s linear; }
+  .logo i:nth-child(1) { background: var(--gold); height: 10.7px; }
+  .logo i:nth-child(2) { background: var(--orange); height: 18.9px; }
+  .logo i:nth-child(3) { background: var(--rose); height: 14.6px; }
+  .logo i:nth-child(4) { background: var(--plum); height: 8.6px; }
+
+  /* QR: straight on the surface, in ink */
+  .qr-wrap {
+    position: absolute; left: 50%; top: 82px; translate: -50% 0; transform-origin: top center;
+    transition: transform .42s cubic-bezier(.23, 1, .32, 1), opacity .3s;
+  }
+  .qr { display: block; color: var(--text); }
+  .scan { position: absolute; left: 0; right: 0; text-align: center; transition: transform .42s cubic-bezier(.23, 1, .32, 1), opacity .25s; }
+  .scan .a { font-size: 14px; font-weight: 500; color: var(--text); }
+  .scan .url { font-size: 13.5px; font-weight: 500; color: var(--link); margin-top: 3px; }
+  .scan .hint { font-size: 12px; color: var(--faint); margin-top: 5px; }
+
+  .status { position: absolute; left: 24px; right: 24px; display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 500; transition: top .42s cubic-bezier(.23, 1, .32, 1); }
+  .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; transition: background .2s, box-shadow .2s; }
+  .status.on .dot { background: var(--green); box-shadow: 0 0 0 4px rgb(48 209 88 / .2); }
+  .status .rate { margin-left: auto; font-size: 12.5px; color: var(--dim); }
+  .waiting .dot { animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; } }
+
+  .live { position: absolute; left: 24px; right: 24px; transition: opacity .3s, translate .42s cubic-bezier(.23, 1, .32, 1); }
+  /* Stash's progress bar: the filled part and the rest of the track are two pills with a 4px gap */
+  .meter { height: 8px; position: relative; }
+  .meter b, .meter span { position: absolute; top: 0; height: 100%; border-radius: 4px; }
+  .meter b { left: 0; }
+  .meter span { right: 0; background: rgb(var(--ink-rgb) / .1); }
+  /* one hue: quiet is the light shade, loud the deep one */
+  :root { --lo: 255 196 150; --hi: 226 98 22; }
+  [data-theme="light"] { --lo: 247 178 122; --hi: 184 70 8; }
+  canvas.hist { display: block; width: 100%; height: 62px; margin-top: 12px; }
+
+  .foot { position: absolute; left: 24px; right: 20px; bottom: 22px; display: flex; align-items: center; gap: 12px; }
+  .foot .txt { flex: 1; min-width: 0; }
+  .foot .k { font-size: 12px; font-weight: 500; color: var(--faint); }
+  .foot .dev { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .foot .note { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .foot .note.warn { color: var(--warn); }
+  .btn {
+    height: 32px; padding: 0 16px; border: 0; border-radius: 16px; background: var(--orange); color: white; flex: none;
+    font: 600 13px "DM Sans", sans-serif; cursor: pointer; transition: background .15s, transform .14s cubic-bezier(.23, 1, .32, 1);
+  }
+  .btn:hover { background: #fa9650; }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { background: rgb(242 125 46 / .4); color: rgb(255 255 255 / .75); cursor: default; transform: none; }
+
+  /* hide helper: elements that don't exist in a state are gone, not dimmed */
+  .gone { opacity: 0; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation: none !important; } }
+</style>
+</head>
+<body>
+  <aside class="panel">
+    <div>
+      <h1>Hum: window prototype</h1>
+      <p>QR drawn straight on the Mica in the theme's ink. Nothing is boxed; the live section only exists while a phone streams.</p>
+    </div>
+    <div class="group"><b>Layout when a phone connects</b>
+      <div class="seg" data-key="layout"><button data-v="stack">A · QR shrinks</button><button data-v="swap">B · QR folds away</button></div>
+    </div>
+    <div class="group"><b>QR modules</b>
+      <div class="seg" data-key="dots"><button data-v="square">Square</button><button data-v="round">Rounded</button><button data-v="dot">Dots</button></div>
+    </div>
+    <div class="group"><b>State</b>
+      <div class="seg" data-key="state"><button data-v="idle">Waiting</button><button data-v="live">Connected</button></div>
+    </div>
+    <div class="group"><b>Output</b>
+      <div class="seg" data-key="cable"><button data-v="yes">VB-Cable</button><button data-v="no">Not installed</button><button data-v="busy">Installing</button></div>
+    </div>
+    <div class="group"><b>Theme</b>
+      <div class="seg" data-key="theme"><button data-v="dark">Dark</button><button data-v="light">Light</button></div>
+    </div>
+    <p>Inverted codes (light on dark) scan in the iPhone camera and Google Lens; some older QR apps only read dark-on-light.</p>
+  </aside>
+
+  <div class="win" id="win">
+    <div class="caption" aria-hidden="true">
+      <span><svg width="10" height="10"><path d="M0 5.5h10" stroke="currentColor"/></svg></span>
+      <span><svg width="10" height="10"><path d="M.5.5l9 9M9.5.5l-9 9" stroke="currentColor"/></svg></span>
+    </div>
+    <div class="title"><div class="logo" id="logo"><i></i><i></i><i></i><i></i></div>Hum</div>
+
+    <div class="qr-wrap" id="qrWrap"><svg class="qr" id="qr" width="212" height="212" aria-label="QR code for the phone page"></svg></div>
+    <div class="scan" id="scan">
+      <div class="a">Scan with your phone's camera</div>
+      <div class="url">https://192.168.0.103:8443</div>
+      <div class="hint">Same Wi-Fi. Accept the certificate warning once.</div>
+    </div>
+
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Waiting for your phone</span><span class="rate" id="rate"></span></div>
+    <div class="live" id="live"><div class="meter"><b id="lvl"></b><span id="rest"></span></div><canvas class="hist" id="hist"></canvas></div>
+
+    <div class="foot">
+      <div class="txt">
+        <div class="k">Output</div>
+        <div class="dev" id="dev">CABLE Input (VB-Audio Virtual Cable)</div>
+        <div class="note" id="note">In your app, choose “CABLE Output” as the microphone.</div>
+      </div>
+      <button class="btn" id="install">Install VB-Cable</button>
+    </div>
+  </div>
+
+<script>
+const S = { layout: 'stack', dots: 'round', state: 'idle', cable: 'yes', theme: matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark' };
+const $ = id => document.getElementById(id);
+
+// ---- QR in ink ----
+function drawQR() {
+  const q = qrcode(0, 'M'); q.addData('https://192.168.0.103:8443'); q.make();
+  const n = q.getModuleCount(), size = 212, m = Math.floor(size / n), off = (size - m * n) / 2;
+  const finder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+  let out = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    if (!q.isDark(r, c)) continue;
+    if (S.dots !== 'square' && finder(r, c)) continue;
+    const x = off + c * m, y = off + r * m;
+    if (S.dots === 'dot') out += `<circle cx="${x + m / 2}" cy="${y + m / 2}" r="${m * .42}"/>`;
+    else if (S.dots === 'round') out += `<rect x="${x + .35}" y="${y + .35}" width="${m - .7}" height="${m - .7}" rx="${m * .3}"/>`;
+    else out += `<rect x="${x}" y="${y}" width="${m}" height="${m}"/>`;
+  }
+  if (S.dots !== 'square') {
+    // finder patterns as concentric squircle rings, the way Stash rounds things
+    for (const [r, c] of [[0, 0], [0, n - 7], [n - 7, 0]]) {
+      const x = off + c * m, y = off + r * m, w = 7 * m;
+      out += `<rect x="${x + m / 2}" y="${y + m / 2}" width="${w - m}" height="${w - m}" rx="${m * 2}" fill="none" stroke="currentColor" stroke-width="${m}"/>`;
+      out += `<rect x="${x + 2 * m}" y="${y + 2 * m}" width="${3 * m}" height="${3 * m}" rx="${m * .9}"/>`;
+    }
+  }
+  $('qr').innerHTML = `<g fill="currentColor" shape-rendering="${S.dots === 'square' ? 'crispEdges' : 'auto'}">${out}</g>`;
+}
+
+// ---- layout per state ----
+function layout() {
+  document.documentElement.dataset.theme = S.theme;
+  const live = S.state === 'live';
+  const st = $('status'), lv = $('live'), qw = $('qrWrap'), sc = $('scan');
+  st.classList.toggle('on', live); st.classList.toggle('waiting', !live);
+  $('statusText').textContent = live ? 'Phone connected' : 'Waiting for your phone';
+  $('rate').textContent = live ? '48 kHz' : '';
+  lv.classList.toggle('gone', !live);
+  if (!live) {
+    // QR big and centred; status sits under the scan text
+    qw.style.transform = 'scale(1)'; qw.classList.remove('gone');
+    sc.style.top = '316px'; sc.style.transform = 'none'; sc.classList.remove('gone');
+    st.style.top = '418px';
+  } else if (S.layout === 'stack') {
+    // QR shrinks to make room; another phone can still scan it
+    qw.style.transform = 'scale(.62)'; qw.classList.remove('gone');
+    sc.style.top = '226px'; sc.classList.remove('gone');
+    sc.querySelector('.a').textContent = 'Scan to add another phone';
+    st.style.top = '330px'; lv.style.top = '362px';
+  } else {
+    // QR folds away; the live view takes the space
+    qw.style.transform = 'scale(.9)'; qw.classList.add('gone');
+    sc.classList.add('gone');
+    st.style.top = '96px'; lv.style.top = '130px';
+  }
+  if (!live) sc.querySelector('.a').textContent = "Scan with your phone's camera";
+  $('hist').style.height = S.layout === 'swap' && live ? '220px' : '62px';
+
+  const cable = S.cable === 'yes';
+  $('dev').textContent = cable ? 'CABLE Input (VB-Audio Virtual Cable)' : 'Speakers (Realtek(R) Audio)';
+  const note = $('note'), btn = $('install');
+  btn.classList.toggle('gone', cable); btn.style.display = cable ? 'none' : '';
+  btn.disabled = S.cable === 'busy';
+  btn.textContent = S.cable === 'busy' ? 'Installing…' : 'Install VB-Cable';
+  note.className = 'note' + (S.cable === 'no' ? ' warn' : '');
+  note.textContent = cable ? 'In your app, choose “CABLE Output” as the microphone.'
+    : S.cable === 'busy' ? 'Allow the Windows prompt to install the driver.' : "VB-Cable isn't installed, so Hum plays on your speakers.";
+  drawQR();
+}
+
+document.querySelectorAll('.seg').forEach(seg => {
+  const key = seg.dataset.key;
+  seg.querySelectorAll('button').forEach(b => b.onclick = () => { S[key] = b.dataset.v; sync(); });
+});
+function sync() {
+  document.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', S[seg.dataset.key] === b.dataset.v)));
+  layout();
+}
+$('install').onclick = () => { S.cable = 'busy'; sync(); setTimeout(() => { S.cable = 'yes'; sync(); }, 2200); };
+
+// ---- fake voice: level, history, logo ----
+const hist = new Array(120).fill(0), rest = [10.7, 18.9, 14.6, 8.6];
+let level = 0, t = 0;
+function frame() {
+  t += 1 / 60;
+  const talking = S.state === 'live';
+  const env = talking ? Math.max(0, Math.sin(t * 2.1) * .5 + Math.sin(t * 5.3) * .3 + .25) * (0.6 + Math.random() * .4) : 0;
+  level = Math.max(level * .86, Math.sqrt(Math.min(1, env)) * .95);
+  if (Math.round(t * 60) % 2 === 0) { hist.shift(); hist.push(level); }
+  // the meter: fill pill, 4px gap, rest-of-track pill (the fill hides below its own height)
+  const css = getComputedStyle(document.documentElement);
+  const lo = css.getPropertyValue('--lo').trim().split(/\s+/).map(Number), hi = css.getPropertyValue('--hi').trim().split(/\s+/).map(Number);
+  const shade = v => `rgb(${lo.map((c, i) => Math.round(c + (hi[i] - c) * Math.min(1, v))).join(' ')})`;
+  const mw = $('lvl').parentElement.clientWidth, fw = level * mw;
+  const shown = fw >= 8;
+  $('lvl').style.width = shown ? `${fw}px` : '0';
+  // same scale as the chart: light at silence, deep at full, so the tip matches the curve at that height
+  $('lvl').style.background = `linear-gradient(90deg, ${shade(0)}, ${shade(1)}) 0 0 / ${mw}px 100% no-repeat`;
+  $('rest').style.width = `${shown ? Math.max(0, mw - fw - 4) : mw}px`;
+  document.querySelectorAll('#logo i').forEach((b, i) => b.style.height = `${rest[i] + (21 - rest[i]) * hist[hist.length - 1 - i * 4] * .9}px`);
+  const cv = $('hist'), dpr = devicePixelRatio, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  if (talking) {
+    const pts = hist.map((v, i) => [w * i / (hist.length - 1), h - 1.5 - v * (h - 3)]);
+    const path = () => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); };
+    // colour by height: the top (loud) is the deep shade, the bottom (quiet) the light one
+    const rgb = (c, a) => `rgb(${c.join(' ')} / ${a})`;
+    // the area under the curve, fading out toward the bottom
+    path(); g.lineTo(w, h); g.lineTo(0, h); g.closePath();
+    const fill = g.createLinearGradient(0, 0, 0, h);
+    fill.addColorStop(0, rgb(hi, .32)); fill.addColorStop(.55, rgb(lo, .12)); fill.addColorStop(1, rgb(lo, 0));
+    g.fillStyle = fill; g.fill();
+    path();
+    const line = g.createLinearGradient(0, 0, 0, h);
+    line.addColorStop(0, rgb(hi, 1)); line.addColorStop(1, rgb(lo, 1));
+    g.strokeStyle = line; g.lineWidth = 1.6; g.lineJoin = g.lineCap = 'round'; g.stroke();
+    // fade the whole history in from its left (oldest) end
+    g.globalCompositeOperation = 'destination-in';
+    const fade = g.createLinearGradient(0, 0, w * .3, 0);
+    fade.addColorStop(0, 'rgb(0 0 0 / 0)'); fade.addColorStop(1, 'rgb(0 0 0 / 1)');
+    g.fillStyle = fade; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'source-over';
+  }
+  requestAnimationFrame(frame);
+}
+sync(); frame();
+</script>
+</body>
+</html>

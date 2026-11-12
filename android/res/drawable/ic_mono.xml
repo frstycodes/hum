@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One-colour logo: the themed launcher icon and the notification icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M33.049,39.840 h3.840 a2.441,2.441 0 0 1 2.441,2.441 v23.438 a2.441,2.441 0 0 1 -2.441,2.441 h-3.840 a2.441,2.441 0 0 1 -2.441,-2.441 v-23.438 a2.441,2.441 0 0 1 2.441,-2.441 z M45.736,29.078 h3.840 a2.441,2.441 0 0 1 2.441,2.441 v44.961 a2.441,2.441 0 0 1 -2.441,2.441 h-3.840 a2.441,2.441 0 0 1 -2.441,-2.441 v-44.961 a2.441,2.441 0 0 1 2.441,-2.441 z M58.424,34.742 h3.840 a2.441,2.441 0 0 1 2.441,2.441 v33.633 a2.441,2.441 0 0 1 -2.441,2.441 h-3.840 a2.441,2.441 0 0 1 -2.441,-2.441 v-33.633 a2.441,2.441 0 0 1 2.441,-2.441 z M71.111,42.672 h3.840 a2.441,2.441 0 0 1 2.441,2.441 v17.774 a2.441,2.441 0 0 1 -2.441,2.441 h-3.840 a2.441,2.441 0 0 1 -2.441,-2.441 v-17.774 a2.441,2.441 0 0 1 2.441,-2.441 z" />
+</vector>
